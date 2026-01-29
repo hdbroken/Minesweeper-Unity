@@ -1,4 +1,4 @@
-public class BoardManager
+public class Board
 {
     private int _width;
     private int _height;
@@ -11,7 +11,7 @@ public class BoardManager
 
     private const int MAX_NEIGHBORS = 8;
 
-    public BoardManager(int width, int height, int mineCount)
+    public Board(int width, int height, int mineCount)
     {
         _width = width;
         _height = height;
