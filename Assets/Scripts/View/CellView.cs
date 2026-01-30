@@ -54,7 +54,7 @@ public class CellView : MonoBehaviour
         {
             if (_cell.IsMine)
             {
-                _txtCellInfo.text = "💣";
+                _txtCellInfo.text = "M";
             }
             else
             {

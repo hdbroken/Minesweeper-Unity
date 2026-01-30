@@ -39,4 +39,18 @@ public class CellViewPool
         cell.gameObject.SetActive(false);
         _pool.Enqueue(cell);
     }
+
+    // Ensures the pool has at least 'capacity' instances available.
+    // Call after returning active views (ClearBoard) so the count reflects the total.
+    public void EnsureCapacity(int capacity)
+    {
+        if (capacity <= 0) return;
+        int toCreate = capacity - _pool.Count;
+        for (int i = 0; i < toCreate; i++)
+        {
+            CellView newCell = GameObject.Instantiate(_prefab, _parent);
+            newCell.gameObject.SetActive(false);
+            _pool.Enqueue(newCell);
+        }
+    }
 }
