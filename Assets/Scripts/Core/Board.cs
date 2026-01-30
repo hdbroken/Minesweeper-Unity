@@ -1,31 +1,31 @@
 public class Board
 {
-    private int _width;
-    private int _height;
+    private int _columns;
+    private int _rows;
     private int _mineCount;
     private Cell[,] _grid;
 
-    public int Width => _width;
-    public int Height => _height;
+    public int Columns => _columns;
+    public int Rows => _rows;
     public int MineCount => _mineCount;
 
     private const int MAX_NEIGHBORS = 8;
 
-    public Board(int width, int height, int mineCount)
+    public Board(int columns, int rows, int mineCount)
     {
-        _width = width;
-        _height = height;
+        _columns = columns;
+        _rows = rows;
         _mineCount = mineCount;
-        _grid = new Cell[_width, _height];
+        _grid = new Cell[_columns, _rows];
 
         GenerateBoard();
     }
 
     private void GenerateBoard()
     {
-        for (int x = 0; x < _width; x++)
+        for (int y = 0; y < _rows; y++)
         {
-            for (int y = 0; y < _height; y++)
+            for (int x = 0; x < _columns; x++)
             {
                 _grid[x, y] = new Cell();
             }
@@ -42,8 +42,8 @@ public class Board
 
         while (placed < _mineCount)
         {
-            int x = rand.Next(_width);
-            int y = rand.Next(_height);
+            int x = rand.Next(_columns);
+            int y = rand.Next(_rows);
 
             if (!_grid[x, y].IsMine)
             {
@@ -55,9 +55,9 @@ public class Board
 
     private void CalculateProximity()
     {
-        for (int x = 0; x < _width; x++)
+        for (int x = 0; x < _columns; x++)
         {
-            for (int y = 0; y < _height; y++)
+            for (int y = 0; y < _rows; y++)
             {
                 if (_grid[x, y].IsMine) continue;
 
@@ -69,7 +69,7 @@ public class Board
                         int neighborX = x + offsetX;
                         int neighborY = y + offsetY;
 
-                        if (neighborX >= 0 && neighborX < _width && neighborY >= 0 && neighborY < _height)
+                        if (neighborX >= 0 && neighborX < _columns && neighborY >= 0 && neighborY < _rows)
                         {
                             if (_grid[neighborX, neighborY].IsMine) count++;
                         }
