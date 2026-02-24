@@ -7,21 +7,14 @@ public class BoardView : MonoBehaviour, IBoardView
 {
     [SerializeField] private Button _toggleModeButton;
     [SerializeField] private TextMeshProUGUI _modeButtonLabel;
-    [SerializeField] private GridLayoutGroup _gridLayout;
-    [SerializeField] private Transform _gridParent;
+    [SerializeField] private Transform _cellsParent;
     [SerializeField] private CellView _cellPrefab;
-
-    [SerializeField] private VerticalLayoutGroup _verticalLayout;
-
+    
+    private float _spacing;
     private CellViewPool _cellPool;
     private List<CellView> _activeCells = new List<CellView>();
     private Board _board;
     private GameController _gameController;
-
-    private void Awake()
-    {
-        _verticalLayout.enabled = false;
-    }
 
     private void OnEnable()
     {
@@ -43,10 +36,11 @@ public class BoardView : MonoBehaviour, IBoardView
         _modeButtonLabel.text = newFlagMode ? "Mark" : "Reveal";
     }
 
-    public void Init(Board board, GameController gameController)
+    public void Init(Board board, GameController gameController, CameraController cameraController)
     {
         if (board == null) throw new System.ArgumentNullException(nameof(board));
         if (gameController == null) throw new System.ArgumentNullException(nameof(gameController));
+        if (cameraController == null) throw new System.ArgumentNullException(nameof(cameraController));
 
         // Subscribe directly to Board events.
         // - OnCellRevealed: triggered when a cell is revealed in the model.
@@ -55,9 +49,12 @@ public class BoardView : MonoBehaviour, IBoardView
         board.OnCellRevealed += UpdateCell;
         board.OnFlagToggled += UpdateCell;
 
+        _spacing = _cellPrefab.CellSize * 0.1f; // 10% cell's size
         GenerateBoard(board, gameController);
-
+        
         _gameController = gameController;
+        
+        cameraController.FitCameraToBoard(board.Rows, board.Columns, _cellPrefab.CellSize, _spacing);
     }
 
     // Generate the visual board based on the model data. 
@@ -77,19 +74,18 @@ public class BoardView : MonoBehaviour, IBoardView
         // Create or ensure pool capacity with the correct size
         if (_cellPool == null)
         {
-            _cellPool = new CellViewPool(_cellPrefab, cellsNeeded, _gridParent);
+            _cellPool = new CellViewPool(_cellPrefab, cellsNeeded, _cellsParent);
         }
         else
         {
             _cellPool.EnsureCapacity(cellsNeeded);
         }
 
-        // Adjust layout so the Grid generates the correct number of columns
-        if (_gridLayout != null)
-        {
-            _gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            _gridLayout.constraintCount = board.Columns;
-        }
+        float step = _cellPrefab.CellSize + _spacing;
+
+        // Calculate offset to center the board
+        float offsetX = -(board.Columns - 1) * step / 2f;
+        float offsetY = (board.Rows - 1) * step / 2f;
 
         // Instantiate visual cells from the pool
         for (int row = 0; row < board.Rows; row++)
@@ -99,7 +95,10 @@ public class BoardView : MonoBehaviour, IBoardView
                 Cell cell = board.GetCell(column, row);
 
                 CellView cellView = _cellPool.Get();
-                cellView.transform.SetParent(_gridParent, false);
+                cellView.transform.SetParent(_cellsParent, false);
+
+                // Cell's position in world space (centered)
+                cellView.transform.localPosition = new Vector3(column * step + offsetX, -(row * step - offsetY), 0);
 
                 // Initializes the visual cell:
                 // Cell model data, his coordinates on the grid.
@@ -111,8 +110,6 @@ public class BoardView : MonoBehaviour, IBoardView
                 _activeCells.Add(cellView);
             }
         }
-
-        _verticalLayout.enabled = true;
     }
 
     public void ClearBoard()
