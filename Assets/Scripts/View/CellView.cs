@@ -5,27 +5,23 @@ using System;
 
 public class CellView : MonoBehaviour
 {
-    [SerializeField] private TextMeshProUGUI _txtCellInfo;
-    [SerializeField] private Button _button;
+    [SerializeField] private TextMeshPro _txtCellInfo;
+    [SerializeField] private SpriteRenderer _cellSpriteRenderer;
+
+    [Header("Sprites")]
+    [SerializeField] private Sprite _flagSprite;
+    [SerializeField] private Sprite _questionSprite;
+    [SerializeField] private Sprite _mineSprite;
+    [SerializeField] private Sprite _emptySprite;
 
     private Cell _cell;
     private Action<int, int> _onCellClicked;
     private int _column;
     private int _row;
+    private bool _isInteractable = true;
     public int Column => _column;
     public int Row => _row;
-
-    private void OnEnable()
-    {
-        if (_button != null)
-            _button.onClick.AddListener(OnClick);
-    }
-
-    private void OnDisable()
-    {
-        if (_button != null)
-            _button.onClick.RemoveListener(OnClick);
-    }
+    public float CellSize => _cellSpriteRenderer != null ? _cellSpriteRenderer.bounds.size.x : 1f;
 
     // Initializes the CellView. 
     // Called from BoardView when creating visual cells. 
@@ -44,9 +40,11 @@ public class CellView : MonoBehaviour
         UpdateVisual();
     }
 
-    private void OnClick()
+    private void OnMouseDown()
     {
         if (_cell == null) return;
+
+        if (!_cell.IsInteractable) return;
 
         // Trigger the callback assigned during initialization. 
         // This sends the cell's coordinates to the CellViewController, 
@@ -55,19 +53,21 @@ public class CellView : MonoBehaviour
     }
 
     // Updates the visual state based on the Cell data:
-    // - Revealed mine : "M"
+    // - Revealed mine : set sprite
     // - Revealed safe cell : proximity number or empty
-    // - Not revealed but marked : "F" (flag) or "?" (Question)
-    // - Not revealed and not marked : empty
+    // - Not revealed but marked : change sprite.
+    // - Not revealed and not marked : empty sprite
     // Button interactability is disabled once the cell is revealed.
     public void UpdateVisual()
     {
+        if (!_isInteractable) return;
+
         if (_txtCellInfo == null) return;
 
         if (_cell == null)
         {
             _txtCellInfo.text = string.Empty;
-            if (_button != null) _button.interactable = false;
+            if (_isInteractable) _isInteractable = false;
             return;
         }
 
@@ -75,24 +75,25 @@ public class CellView : MonoBehaviour
         {
             if (_cell.IsMine)
             {
-                _txtCellInfo.text = "M";
+                _cellSpriteRenderer.sprite = _mineSprite;
             }
             else
             {
+                _cellSpriteRenderer.color = Color.white; // Change color to indicate revealed state
                 _txtCellInfo.text = _cell.ProximityCount > 0 ? _cell.ProximityCount.ToString() : string.Empty;
             }
         }
         else
         {
             if (_cell.MarkState == CellMarkState.Flag)
-                _txtCellInfo.text = "F";
+                _cellSpriteRenderer.sprite = _flagSprite;
             else if (_cell.MarkState == CellMarkState.Question)
-                _txtCellInfo.text = "?";
+                _cellSpriteRenderer.sprite = _questionSprite;
             else
-                _txtCellInfo.text = string.Empty;
+                _cellSpriteRenderer.sprite = _emptySprite;
         }
 
-        if (_button != null)
-            _button.interactable = !_cell.IsRevealed;
+        _isInteractable = !_cell.IsRevealed;
+        _cell.Interactable(_isInteractable);
     }
 }
