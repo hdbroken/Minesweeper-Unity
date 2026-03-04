@@ -1,11 +1,20 @@
 using UnityEngine;
 
+/// <summary>
+/// Camera controller.
+/// - Adjusts the main camera to fit the entire board. 
+/// - Calculates size and position based on rows, columns, cell size, and spacing.
+/// - Applies extra padding on X and Y to avoid cutting edges.
+/// </summary>
 public class CameraController
 {
     private Camera _camera;
     private float _paddingX;
     private float _paddingY;
 
+    /// <summary>
+    /// Constructor: receives the camera and padding values.
+    /// </summary>
     public CameraController(Camera camera, float paddingX = 1f, float paddingY = 1f)
     {
         _camera = camera;
@@ -13,6 +22,13 @@ public class CameraController
         _paddingY = paddingY;
     }
 
+    /// <summary> 
+    /// Fits the camera to the board:
+    /// - Calculates board width and height from rows, columns, cell size, and spacing.
+    /// - Applies padding on both axes.
+    /// - Adjusts orthographicSize so the entire board is visible.
+    /// - Centers the camera.
+    /// </summary>
     public void FitCameraToBoard(int rows, int columns, float cellSize, float spacing)
     {
         float boardWidth = columns * (cellSize + spacing);
