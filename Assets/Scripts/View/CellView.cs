@@ -1,8 +1,14 @@
 ﻿using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
 using System;
 
+/// <summary> 
+/// Visual representation of a single board cell.
+/// - Displays sprite and text based on the model state (Cell).
+/// - Receives coordinates and click callback from BoardView.
+/// - Notifies CellViewController when the player interacts.
+/// - Updates its visual appearance whenever the model changes.
+/// </summary>
 public class CellView : MonoBehaviour
 {
     [SerializeField] private TextMeshPro _txtCellInfo;
@@ -19,16 +25,18 @@ public class CellView : MonoBehaviour
     private int _column;
     private int _row;
     private bool _isInteractable = true;
+
     public int Column => _column;
     public int Row => _row;
     public float CellSize => _cellSpriteRenderer != null ? _cellSpriteRenderer.bounds.size.x : 1f;
 
-    // Initializes the CellView. 
-    // Called from BoardView when creating visual cells. 
-    // The click callback is provided by CellViewController 
-    // and invoked inside OnClick(). 
-    // This links the visual cell to the cell data
-    // and the game logic on GameController via CellViewController.
+    /// <summary> 
+    /// Initializes the visual cell:
+    /// - Associates the model (Cell).
+    /// - Stores grid coordinates.
+    /// - Registers the click callback (provided by CellViewController).
+    /// - Refreshes initial appearance. 
+    /// </summary>
     public void Init(Cell cell, int column, int row, Action<int, int> _onCellClickCallBack)
     {
         _cell = cell ?? throw new System.ArgumentNullException(nameof(cell));
@@ -40,24 +48,28 @@ public class CellView : MonoBehaviour
         UpdateVisual();
     }
 
+    /// <summary>
+    /// Handles mouse click:
+    /// - If interactable, triggers the callback(assigned during initialization) with its coordinates.
+    /// - Callback flows to CellViewController -> GameController.
+    /// </summary>
     private void OnMouseDown()
     {
         if (_cell == null) return;
 
         if (!_cell.IsInteractable) return;
 
-        // Trigger the callback assigned during initialization. 
-        // This sends the cell's coordinates to the CellViewController, 
-        // which then notifies to the GameController to update the game state.
         _onCellClicked?.Invoke(_column, _row);
     }
 
-    // Updates the visual state based on the Cell data:
-    // - Revealed mine : set sprite
-    // - Revealed safe cell : proximity number or empty
-    // - Not revealed but marked : change sprite.
-    // - Not revealed and not marked : empty sprite
-    // Button interactability is disabled once the cell is revealed.
+    /// <summary>
+    /// Updates visual appearance based on model state:
+    /// - Revealed mine: mine sprite.
+    /// - Revealed safe: proximity number or empty.
+    /// - Unrevealed but marked: flag or question sprite.
+    /// - Unrevealed and unmarked: empty sprite.
+    /// Also adjusts interactability.
+    /// </summary>
     public void UpdateVisual()
     {
         if (!_isInteractable) return;
