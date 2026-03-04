@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public enum GameState
@@ -7,30 +8,105 @@ public enum GameState
     Lost
 }
 
+/// <summary> 
+/// Main controller for game logic.
+/// - Coordinates the board (Board) and the timer (GameTimer).
+/// - Maintains game state (Playing, Won, Lost). 
+/// - Exposes board events externally (OnCellRevealed, OnFlagToggled). 
+/// - Handles cell clicks: reveal or flag depending on current mode.
+/// - Evaluates win/lose conditions. 
+/// </summary>
 public class GameController
 {
     private Board _board;
     private GameState _gameState;
     private bool _isMarkMode = false;
     private bool _mineRevealed = false;
-    public bool IsFlagMode => _isMarkMode;
+    private GameTimer _timer;
 
-    public GameController(Board board)
+    // Properties exposed to view/controllers
+    public bool IsFlagMode => _isMarkMode;
+    public bool IsTimerRunning => _timer.IsRunning;
+    public Cell GetCell(int column, int row) => _board.GetCell(column, row);
+    public int MineCount => _board.MineCount;
+    public int FlagCount => _board.FlagCount;
+
+    /// <summary>
+    /// Constructor: receives Board and Timer and starts the game.
+    /// </summary>
+    public GameController(Board board, GameTimer timer)
     {
-        if (board == null) throw new System.ArgumentNullException(nameof(board));
-        StartGame(board);
+        if (board == null) throw new ArgumentNullException(nameof(board));
+        if (timer == null) throw new ArgumentNullException(nameof(timer));
+        StartGame(board, timer);
     }
 
-    public void StartGame(Board board)
+    /// <summary>
+    /// Events exposed externally:
+    /// - OnCellRevealed: fired when the board reveals a cell.
+    /// - OnFlagToggled: fired when the board flags/unflags a cell.
+    /// Consumed by BoardViewController.
+    /// </summary>
+    public event Action<int, int> OnCellRevealed 
+    { 
+        add { _board.OnCellRevealed += value; } 
+        remove { _board.OnCellRevealed -= value; } 
+    }
+
+    public event Action<int, int> OnFlagToggled 
+    { 
+        add { _board.OnFlagToggled += value; }
+        remove { _board.OnFlagToggled -= value; } 
+    }
+
+    /// <summary>
+    /// - Initializes game state.
+    /// - Subscribes HandleCellRevealed to board event.
+    /// - Starts the timer.
+    /// </summary>
+    private void StartGame(Board board, GameTimer timer)
     {
         _board = board;
+        _timer = timer;
         _gameState = GameState.Playing;
         _mineRevealed = false;
         _isMarkMode = false;
 
         _board.OnCellRevealed += HandleCellRevealed;
+
+        StartTimer();
     }
 
+    /// <summary>
+    /// Ends the game: stops timer and unsubscribes events.
+    /// </summary>
+    private void EndGame()
+    {
+        StopTimer();
+        _board.OnCellRevealed -= HandleCellRevealed;
+    }
+
+    private void StartTimer() 
+    { 
+        _timer.Start();
+    } 
+
+    private void StopTimer() 
+    {
+        _timer.Stop();
+    }
+
+    public TimeSpan GetTime()
+    {
+        return _timer.Elapsed;
+    }
+
+    /// <summary>
+    /// Reveals a cell: 
+    /// - If mine: defeat.
+    /// - If safe: auto-reveals neighbors. 
+    /// - Then checks victory conditions.
+    /// </summary>
     private void RevealCell(int x, int y)
     {
         if (_gameState != GameState.Playing) return;
@@ -40,6 +116,7 @@ public class GameController
         if (_board.GetCell(x, y).IsMine)
         {
             _mineRevealed = true;
+            EndGame();
         }
         else
         {
@@ -62,6 +139,14 @@ public class GameController
         }
     }
 
+    /// <summary> 
+    /// Evaluates win/lose conditions:
+    /// - Mine revealed: defeat.
+    /// - All safe cells revealed: victory.
+    /// - All mines correctly flagged": victory.
+    /// - Incorrect flags: defeat.
+    /// In all cases, reveals the full board at the end.
+    /// </summary>
     private void CheckVictory()
     {
         if (_gameState != GameState.Playing)
@@ -70,6 +155,7 @@ public class GameController
         if (_mineRevealed)
         {
             _gameState = GameState.Lost;
+            EndGame();
             Debug.Log("Game Over! Mine revealed.");
         }
 
@@ -77,20 +163,23 @@ public class GameController
         if (_board.RevealedCellsCount == _board.TotalCells - _board.MineCount)
         {
             _gameState = GameState.Won;
+            EndGame();
             Debug.Log("Victory: All safe cells revealed!");
         }
 
         // Player placed as many flags as mines
-        if (_board.MarkedCellsCount == _board.MineCount)
+        if (_board.FlagCount == _board.MineCount)
         {
             if (_board.AreFlagsCorrect())
             {
                 _gameState = GameState.Won;
+                EndGame();
                 Debug.Log("Victory: All mines flagged correctly!");
             }
             else
             {
                 _gameState = GameState.Lost;
+                EndGame();
                 Debug.Log("Defeat: Wrong flag placement!");
             }
         }
@@ -139,5 +228,10 @@ public class GameController
         {
             CheckVictory();
         }
+    }
+
+    public (int Rows, int Columns) GetBoardDimensions()
+    {
+        return (_board.Rows, _board.Columns);
     }
 }
