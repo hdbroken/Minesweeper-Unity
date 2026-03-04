@@ -5,6 +5,13 @@ public enum CellMarkState
     Question
 }
 
+/// <summary>
+/// Represents an individual board cell.
+/// - Can be a mine or safe.
+/// - Maintains its state: revealed, interactable, and mark (Empty, Flag, Question). 
+/// - Stores the number of nearby mines (proximity).
+/// - Provides simple methods to change its state (reveal, mark, set values).
+/// </summary>
 public class Cell
 {
     private bool _isMine;
@@ -18,6 +25,7 @@ public class Cell
     public bool IsInteractable => _isInteractable;
     public CellMarkState MarkState => _markState;
     public int ProximityCount => _proximityCount;
+
     public void SetMine(bool value) => _isMine = value;
     public void SetProximityCount(int count) => _proximityCount = count;
     public void Reveal() => _isRevealed = true;

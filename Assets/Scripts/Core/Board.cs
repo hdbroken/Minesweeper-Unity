@@ -1,11 +1,22 @@
 ﻿using System;
 
+/// <summary>
+/// Represents the game board. 
+/// - Contains the grid of cells (Cell).
+/// - Generates mines and calculates proximity.
+/// - Maintains counters for revealed cells and flags. 
+/// - Exposes events:
+///   OnCellRevealed: fired when a cell is revealed.
+///   OnFlagToggled: fired when a cell is flagged/unflagged.
+/// These events are consumed by GameController and then propagated to BoardViewController.
+/// </summary>
 public class Board
 {
     private int _columns;
     private int _rows;
     private int _mineCount;
     private int _proximityRange;
+
     private Cell[,] _grid;
     private int _revealedCellsCount = 0;
     private int _totalCells = 0;
@@ -15,10 +26,15 @@ public class Board
     public int Rows => _rows;
     public int MineCount => _mineCount;
     public int RevealedCellsCount => _revealedCellsCount;
-    public int MarkedCellsCount => _flagsCount;
+    public int FlagCount => _flagsCount;
 
     public int TotalCells => _totalCells;
 
+    /// <summary>
+    /// Events:
+    /// - OnCellRevealed: notifies coordinates of a revealed cell.
+    /// - OnFlagToggled: notifies coordinates of a flagged/unflagged cell.
+    /// </summary>
     public event Action<int, int> OnCellRevealed;
     public event Action<int, int> OnFlagToggled;
 
@@ -35,6 +51,9 @@ public class Board
         GenerateBoard();
     }
 
+    /// <summary>
+    /// Initializes grid, places mines, and calculates proximity.
+    /// </summary>
     private void GenerateBoard()
     {
         for (int y = 0; y < _rows; y++)
@@ -100,6 +119,12 @@ public class Board
         return _grid[x, y];
     }
 
+    /// <summary>
+    /// Reveals a cell:
+    /// - Marks the cell as revealed.
+    /// - Increments revealed counter.
+    /// - Fires OnCellRevealed event.
+    /// </summary>
     public void RevealCell(int x, int y)
     {
         Cell cell = GetCell(x, y);
@@ -111,6 +136,9 @@ public class Board
         OnCellRevealed?.Invoke(x, y);
     }
 
+    /// <summary> 
+    /// Automatically reveals neighbors if the cell is safe and proximity = 0.
+    /// </summary>
     public void AutoRevealCells(Cell cell, int x, int y)
     {
         if (cell.ProximityCount == 0 && !cell.IsMine)
@@ -135,6 +163,11 @@ public class Board
         }
     }
 
+    /// <summary>
+    /// Toggles the mark state of a cell (Empty - Flag - Question - Empty).
+    /// - Updates flag counter.
+    /// - Fires OnFlagToggled event.
+    /// </summary>
     public void ToggleCellMark(int x, int y)
     {
         Cell cell = GetCell(x, y);
@@ -171,11 +204,13 @@ public class Board
         return true;
     }
 
+    /// <summary>
+    /// Reveals all cells on the board. 
+    /// Used when the game ends (win or loss).
+    /// Fires OnCellRevealed for each cell.
+    /// </summary>
     public void RevealAllCells()
     {
-        // Reveal every cell in the grid.
-        // Called when the game ends (loss or win) to show all mines and safe cells.
-
         for (int x = 0; x < _columns; x++)
         {
             for (int y = 0; y < _rows; y++)
@@ -186,7 +221,6 @@ public class Board
                 {
                     cell.Reveal();
 
-                    // Trigger the board event so the view updates
                     OnCellRevealed?.Invoke(x, y);
                 }
             }
