@@ -1,20 +1,36 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary> 
+/// Main board view. 
+/// - Initialized with a BoardViewController and a CameraController. 
+/// - Subscribes to BoardViewController events: 
+///   OnCellUpdated: refreshes the visual cell. 
+///   OnMineCounterChanged: updates the mine counter. 
+/// - Generates the cell grid using a pool (CellViewPool). 
+/// - Handles the mode toggle button (Reveal/Mark). 
+/// - Updates the timer on screen while the game is active. 
+/// </summary>
 public class BoardView : MonoBehaviour, IBoardView
 {
     [SerializeField] private Button _toggleModeButton;
-    [SerializeField] private TextMeshProUGUI _modeButtonLabel;
+    [SerializeField] private TextMeshProUGUI _modeButtonText;
+    [SerializeField] private TextMeshProUGUI _mineCounterText;
+    [SerializeField] private TextMeshProUGUI _timerText;
+
     [SerializeField] private Transform _cellsParent;
-    [SerializeField] private CellView _cellPrefab;
+    [SerializeField] private CellView _cellPrefab;    
     
-    private float _spacing;
     private CellViewPool _cellPool;
     private List<CellView> _activeCells = new List<CellView>();
-    private Board _board;
-    private GameController _gameController;
+
+    private BoardViewController _boardViewController;
+    private Coroutine _updateTimer;
+    private float _spacing;
 
     private void OnEnable()
     {
@@ -22,54 +38,99 @@ public class BoardView : MonoBehaviour, IBoardView
             _toggleModeButton.onClick.AddListener(OnToggleModeButtonClick);
     }
 
+    /// <summary>
+    /// Cleanup when the view is disabled:
+    /// - Removes button listener.
+    /// - Stops the timer coroutine.
+    /// - Unsubscribes from BoardViewController events. 
+    /// </summary>
     private void OnDisable()
     {
         if (_toggleModeButton != null)
             _toggleModeButton.onClick.RemoveListener(OnToggleModeButtonClick);
+
+        if (_updateTimer != null)
+        {
+            StopCoroutine(_updateTimer);
+            _updateTimer = null;
+        }
+
+        _boardViewController.OnCellUpdated -= UpdateCell;
+        _boardViewController.OnMineCounterChanged -= UpdateMineCounterText;
+        _boardViewController.UnsubscribeEvents();
     }
 
     private void OnToggleModeButtonClick()
     {
-        bool newFlagMode = !_gameController.IsFlagMode;
-        _gameController.SetMarkMode(newFlagMode);
+        bool newFlagMode = !_boardViewController.IsFlagMode;
+        _boardViewController.ToggleMarkMode();
 
-        _modeButtonLabel.text = newFlagMode ? "Mark" : "Reveal";
+        _modeButtonText.text = newFlagMode ? "Mark" : "Reveal";
     }
 
-    public void Init(Board board, GameController gameController, CameraController cameraController)
+    /// <summary>
+    /// Initializes the view with the controller and camera and board controller.
+    /// - Subscribes to OnCellUpdated and OnMineCounterChanged. 
+    /// - Initializes the mine counter. 
+    /// - Generates the visual grid. 
+    /// - Adjusts the camera to board size. 
+    /// - Starts the timer coroutine. 
+    /// </summary>
+    public void Init(BoardViewController boardViewController, CameraController cameraController)
     {
-        if (board == null) throw new System.ArgumentNullException(nameof(board));
-        if (gameController == null) throw new System.ArgumentNullException(nameof(gameController));
-        if (cameraController == null) throw new System.ArgumentNullException(nameof(cameraController));
+        if (cameraController == null) throw new ArgumentNullException(nameof(cameraController));
+        if (boardViewController == null) throw new ArgumentException(nameof(boardViewController));
 
+        _boardViewController = boardViewController;
         // Subscribe directly to Board events.
         // - OnCellRevealed: triggered when a cell is revealed in the model.
         // - OnFlagToggled: triggered when a cell is marked/unmarked.
         // BoardView listens to these events to update the visual state.
-        board.OnCellRevealed += UpdateCell;
-        board.OnFlagToggled += UpdateCell;
+        _boardViewController.OnCellUpdated += UpdateCell;
+        _boardViewController.OnMineCounterChanged += UpdateMineCounterText;
+
+        _boardViewController.InitializeMineCounter();
 
         _spacing = _cellPrefab.CellSize * 0.1f; // 10% cell's size
-        GenerateBoard(board, gameController);
-        
-        _gameController = gameController;
-        
-        cameraController.FitCameraToBoard(board.Rows, board.Columns, _cellPrefab.CellSize, _spacing);
+
+        GenerateBoard(_boardViewController.Rows, _boardViewController.Columns);
+
+        cameraController.FitCameraToBoard(_boardViewController.Rows, _boardViewController.Columns, _cellPrefab.CellSize, _spacing);
+
+        _updateTimer = StartCoroutine(UpdateTimer());
     }
 
-    // Generate the visual board based on the model data. 
-    // For each cell in the board, request a CellView from the pool, 
-    // initialize it with the cell data and the click callback, 
-    // and add it to the grid layout.
-    public void GenerateBoard(Board board, GameController gameController)
+    private IEnumerator UpdateTimer()
     {
-        _board = board;
+        while (_boardViewController.IsTimerRunning)
+        {
+            _timerText.text = FormatTime(_boardViewController.GetTime);
+            yield return new WaitForSeconds(.1f);
+        }
+        // Force a final refresh to display the precise stop time (not the last 0.1s update)
+        _timerText.text = FormatTime(_boardViewController.GetTime);
+    }
 
+    private string FormatTime(TimeSpan time)
+    {
+        // Formats time as MM:SS.mmm (e.g. 02:15.347)
+        return string.Format("{0:D2}:{1:D2}.{2:D3}",
+            time.Minutes,
+            time.Seconds,
+            time.Milliseconds);
+    }
+
+    /// <summary> 
+    /// Generates the visual grid: 
+    /// - Requests cells from the pool. 
+    /// - Positions them centered on the board.
+    /// - Initializes each cell with its data and click callback. 
+    /// </summary>
+    public void GenerateBoard(int rows, int columns)
+    {
         ClearBoard();
         
-        CellViewController cellViewController = new CellViewController(gameController);
-
-        int cellsNeeded = board.Columns * board.Rows;
+        int cellsNeeded = columns * rows;
 
         // Create or ensure pool capacity with the correct size
         if (_cellPool == null)
@@ -84,15 +145,15 @@ public class BoardView : MonoBehaviour, IBoardView
         float step = _cellPrefab.CellSize + _spacing;
 
         // Calculate offset to center the board
-        float offsetX = -(board.Columns - 1) * step / 2f;
-        float offsetY = (board.Rows - 1) * step / 2f;
+        float offsetX = -(columns - 1) * step / 2f;
+        float offsetY = (rows - 1) * step / 2f;
 
         // Instantiate visual cells from the pool
-        for (int row = 0; row < board.Rows; row++)
+        for (int row = 0; row < rows; row++)
         {
-            for (int column = 0; column < board.Columns; column++)
+            for (int column = 0; column < columns; column++)
             {
-                Cell cell = board.GetCell(column, row);
+                Cell cell = _boardViewController.GetCell(column, row);
 
                 CellView cellView = _cellPool.Get();
                 cellView.transform.SetParent(_cellsParent, false);
@@ -105,7 +166,7 @@ public class BoardView : MonoBehaviour, IBoardView
                 // and the click callback (HandleCellClick) provided by CellViewController.
                 // When the player clicks
                 // the event is forwared to the controller for handling.
-                cellView.Init(cell, column, row, cellViewController.HandleCellClick);
+                cellView.Init(cell, column, row, _boardViewController.CellViewController.HandleCellClick);
 
                 _activeCells.Add(cellView);
             }
@@ -123,11 +184,13 @@ public class BoardView : MonoBehaviour, IBoardView
         _activeCells.Clear();
     }
 
-    // UpdateCell is called when Board triggers OnCellRevealed or OnFlagToggled.
-    // It finds the matching CellView by coordinates and refreshes its visual state.
+    /// <summary> 
+    /// Refreshes the visual cell at the given coordinates. 
+    /// Triggered when BoardViewController raises OnCellUpdated. 
+    /// </summary>
     public void UpdateCell(int column, int row)
     {
-        Cell cell = _board.GetCell(column, row);
+        Cell cell = _boardViewController.GetCell(column, row);
 
         foreach (CellView cellView in _activeCells)
         {
@@ -137,5 +200,10 @@ public class BoardView : MonoBehaviour, IBoardView
                 break;
             }
         }
+    }
+
+    private void UpdateMineCounterText(int remainingMines)
+    {
+        _mineCounterText.text = remainingMines.ToString();
     }
 }
