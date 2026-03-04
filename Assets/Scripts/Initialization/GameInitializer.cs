@@ -6,7 +6,9 @@ public class GameInitializer : MonoBehaviour
 
     private GameController _gameController;
     private CameraController _cameraController;
-    
+    private BoardViewController _boardViewController;
+
+    [SerializeField] private TimerDriver _timerDriver;
     [SerializeField] private int _columns = 10;
     [SerializeField] private int _rows = 10;
     [SerializeField] private int _mines = 5;
@@ -18,10 +20,12 @@ public class GameInitializer : MonoBehaviour
     private void Start()
     {
         Board board = new Board(_columns, _rows, _mines, _proximityRange);
-        
-        _gameController = new GameController(board);
+        GameTimer gameTimer = new GameTimer();
+        _gameController = new GameController(board, gameTimer);
+        _boardViewController = new BoardViewController(_gameController);
+        _timerDriver.Initialize(gameTimer);
         _cameraController = new CameraController(Camera.main, paddingX, paddingY);
-
-        _boardView.Init(board, _gameController, _cameraController);        
+        
+        _boardView.Init(_boardViewController, _cameraController);        
     }
 }
