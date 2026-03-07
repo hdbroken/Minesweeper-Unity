@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -23,8 +23,8 @@ public class BoardView : MonoBehaviour, IBoardView
     [SerializeField] private TextMeshProUGUI _timerText;
 
     [SerializeField] private Transform _cellsParent;
-    [SerializeField] private CellView _cellPrefab;    
-    
+    [SerializeField] private CellView _cellPrefab;
+
     private CellViewPool _cellPool;
     private List<CellView> _activeCells = new List<CellView>();
 
@@ -79,7 +79,7 @@ public class BoardView : MonoBehaviour, IBoardView
     public void Init(BoardViewController boardViewController, CameraController cameraController)
     {
         if (cameraController == null) throw new ArgumentNullException(nameof(cameraController));
-        if (boardViewController == null) throw new ArgumentException(nameof(boardViewController));
+        if (boardViewController == null) throw new ArgumentNullException(nameof(boardViewController));
 
         _boardViewController = boardViewController;
         // Subscribe directly to Board events.
@@ -93,7 +93,7 @@ public class BoardView : MonoBehaviour, IBoardView
 
         _spacing = _cellPrefab.CellSize * 0.1f; // 10% cell's size
 
-        GenerateBoard(_boardViewController.Rows, _boardViewController.Columns);
+        GenerateBoard(_boardViewController.Columns, _boardViewController.Rows);
 
         cameraController.FitCameraToBoard(_boardViewController.Rows, _boardViewController.Columns, _cellPrefab.CellSize, _spacing);
 
@@ -126,10 +126,10 @@ public class BoardView : MonoBehaviour, IBoardView
     /// - Positions them centered on the board.
     /// - Initializes each cell with its data and click callback. 
     /// </summary>
-    public void GenerateBoard(int rows, int columns)
+    public void GenerateBoard(int columns, int rows)
     {
         ClearBoard();
-        
+
         int cellsNeeded = columns * rows;
 
         // Create or ensure pool capacity with the correct size
@@ -154,7 +154,10 @@ public class BoardView : MonoBehaviour, IBoardView
             for (int column = 0; column < columns; column++)
             {
                 Cell cell = _boardViewController.GetCell(column, row);
-
+#if UNITY_EDITOR
+                string content = cell.IsMine ? "💣" : cell.ProximityCount.ToString();
+                Debug.Log($"Cell[column: {column},row: {row}] → {content}");
+#endif
                 CellView cellView = _cellPool.Get();
                 cellView.transform.SetParent(_cellsParent, false);
 
