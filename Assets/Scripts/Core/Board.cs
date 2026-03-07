@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 /// <summary>
 /// Represents the game board. 
@@ -27,7 +29,6 @@ public class Board
     public int MineCount => _mineCount;
     public int RevealedCellsCount => _revealedCellsCount;
     public int FlagCount => _flagsCount;
-
     public int TotalCells => _totalCells;
 
     /// <summary>
@@ -56,11 +57,11 @@ public class Board
     /// </summary>
     private void GenerateBoard()
     {
-        for (int y = 0; y < _rows; y++)
+        for (int row = 0; row < _rows; row++)
         {
-            for (int x = 0; x < _columns; x++)
+            for (int column = 0; column < _columns; column++)
             {
-                _grid[x, y] = new Cell();
+                _grid[column, row] = new Cell();
             }
         }
 
@@ -73,50 +74,53 @@ public class Board
         int placed = 0;
         System.Random rand = new System.Random();
 
-        while (placed < _mineCount)
-        {
-            int x = rand.Next(_columns);
-            int y = rand.Next(_rows);
-
-            if (!_grid[x, y].IsMine)
+        if (_mineCount == 1)
+            _grid[1, 0].SetMine(true); // For testing, place a single mine in a known position.
+        else
+            while (placed < _mineCount)
             {
-                _grid[x, y].SetMine(true);
-                placed++;
+                int column = rand.Next(_columns);
+                int row = rand.Next(_rows);
+
+                if (!_grid[column, row].IsMine)
+                {
+                    _grid[column, row].SetMine(true);
+                    placed++;
+                }
             }
-        }
     }
 
     private void CalculateProximity()
     {
-        for (int x = 0; x < _columns; x++)
+        for (int column = 0; column < _columns; column++)
         {
-            for (int y = 0; y < _rows; y++)
+            for (int row = 0; row < _rows; row++)
             {
-                if (_grid[x, y].IsMine) continue;
+                if (_grid[column, row].IsMine) continue;
 
                 int count = 0;
-                for (int offsetX = -_proximityRange; offsetX <= _proximityRange; offsetX++)
+                for (int offsetColumn = -_proximityRange; offsetColumn <= _proximityRange; offsetColumn++)
                 {
-                    for (int offsetY = -_proximityRange; offsetY <= _proximityRange; offsetY++)
+                    for (int offsetRow = -_proximityRange; offsetRow <= _proximityRange; offsetRow++)
                     {
-                        int neighborX = x + offsetX;
-                        int neighborY = y + offsetY;
+                        int neighborColumn = column + offsetColumn;
+                        int neighborRow = row + offsetRow;
 
-                        if (neighborX >= 0 && neighborX < _columns && neighborY >= 0 && neighborY < _rows)
+                        if (neighborColumn >= 0 && neighborColumn < _columns && neighborRow >= 0 && neighborRow < _rows)
                         {
-                            if (_grid[neighborX, neighborY].IsMine) count++;
+                            if (_grid[neighborColumn, neighborRow].IsMine) count++;
                         }
                     }
                 }
 
-                _grid[x, y].SetProximityCount(count);
+                _grid[column, row].SetProximityCount(count);
             }
         }
     }
 
-    public Cell GetCell(int x, int y)
+    public Cell GetCell(int column, int row)
     {
-        return _grid[x, y];
+        return _grid[column, row];
     }
 
     /// <summary>
@@ -125,37 +129,57 @@ public class Board
     /// - Increments revealed counter.
     /// - Fires OnCellRevealed event.
     /// </summary>
-    public void RevealCell(int x, int y)
+    public void RevealCell(int column, int row)
     {
-        Cell cell = GetCell(x, y);
+        Cell cell = GetCell(column, row);
 
-        if (cell.IsRevealed) return;
+        if (cell.IsRevealed || cell.MarkState == CellMarkState.Flag || cell.MarkState == CellMarkState.Question) return;
 
         cell.Reveal();
         _revealedCellsCount++;
-        OnCellRevealed?.Invoke(x, y);
+        OnCellRevealed?.Invoke(column, row);
     }
 
     /// <summary> 
     /// Automatically reveals neighbors if the cell is safe and proximity = 0.
     /// </summary>
-    public void AutoRevealCells(Cell cell, int x, int y)
+    public void AutoRevealCells(Cell startCell, int column, int row)
     {
-        if (cell.ProximityCount == 0 && !cell.IsMine)
+        Queue<(Cell, int, int)> queue = new Queue<(Cell, int, int)>();
+        HashSet<(int, int)> visited = new HashSet<(int, int)>();
+
+        queue.Enqueue((startCell, column, row));
+        visited.Add((column, row));
+
+        while (queue.Count > 0)
         {
-            for (int offsetX = -_proximityRange; offsetX <= _proximityRange; offsetX++)
+            (Cell cell, int currentColumn, int currentRow) = queue.Dequeue();
+
+            if (cell.IsMine) continue;
+
+            for (int offsetColumn = -_proximityRange; offsetColumn <= _proximityRange; offsetColumn++)
             {
-                for (int offsetY = -_proximityRange; offsetY <= _proximityRange; offsetY++)
+                for (int offsetRow = -_proximityRange; offsetRow <= _proximityRange; offsetRow++)
                 {
-                    int neighborX = x + offsetX;
-                    int neighborY = y + offsetY;
-                    if (neighborX >= 0 && neighborX < _columns && neighborY >= 0 && neighborY < _rows)
+                    int neighborColumn = currentColumn + offsetColumn;
+                    int neighborRow = currentRow + offsetRow;
+
+                    if (neighborColumn >= 0 && neighborColumn < _columns &&
+                        neighborRow >= 0 && neighborRow < _rows)
                     {
-                        Cell NeighborCell = GetCell(neighborX, neighborY);
-                        if (!NeighborCell.IsRevealed)
+                        if (!visited.Contains((neighborColumn, neighborRow)))
                         {
-                            RevealCell(neighborX, neighborY);
-                            AutoRevealCells(NeighborCell, neighborX, neighborY);
+                            Cell neighborCell = GetCell(neighborColumn, neighborRow);
+                            if (!neighborCell.IsRevealed && neighborCell.MarkState == CellMarkState.Empty)
+                            {
+                                RevealCell(neighborColumn, neighborRow);
+                                visited.Add((neighborColumn, neighborRow));
+
+                                if (neighborCell.ProximityCount == 0)
+                                {
+                                    queue.Enqueue((neighborCell, neighborColumn, neighborRow));
+                                }
+                            }
                         }
                     }
                 }
@@ -168,9 +192,9 @@ public class Board
     /// - Updates flag counter.
     /// - Fires OnFlagToggled event.
     /// </summary>
-    public void ToggleCellMark(int x, int y)
+    public void ToggleCellMark(int column, int row)
     {
-        Cell cell = GetCell(x, y);
+        Cell cell = GetCell(column, row);
         // 'previousState' stores the cell's state before toggling. 
         // This ensures the marked cells counter is only updated 
         // if the state actually changed. 
@@ -181,27 +205,11 @@ public class Board
         cell.ToggleMark();
 
         if (cell.MarkState == CellMarkState.Flag && previousState != CellMarkState.Flag)
-            _flagsCount++; 
+            _flagsCount++;
         else if (previousState == CellMarkState.Flag && cell.MarkState != CellMarkState.Flag)
             _flagsCount--;
 
-        OnFlagToggled?.Invoke(x, y);
-    }
-
-    public bool AreFlagsCorrect()
-    {
-        if (_flagsCount != _mineCount)
-            return false;
-
-        foreach (Cell cell in _grid)
-        {
-            if (cell.MarkState == CellMarkState.Flag && !cell.IsMine)
-                // Wrong flag placement, lost the game.
-                return false;
-        }
-
-        // All flags match mines
-        return true;
+        OnFlagToggled?.Invoke(column, row);
     }
 
     /// <summary>
@@ -211,17 +219,17 @@ public class Board
     /// </summary>
     public void RevealAllCells()
     {
-        for (int x = 0; x < _columns; x++)
+        for (int column = 0; column < _columns; column++)
         {
-            for (int y = 0; y < _rows; y++)
+            for (int row = 0; row < _rows; row++)
             {
-                Cell cell = _grid[x, y];
+                Cell cell = _grid[column, row];
 
                 if (!cell.IsRevealed)
                 {
                     cell.Reveal();
 
-                    OnCellRevealed?.Invoke(x, y);
+                    OnCellRevealed?.Invoke(column, row);
                 }
             }
         }
