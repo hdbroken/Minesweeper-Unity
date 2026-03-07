@@ -674,6 +674,18 @@ PrefabInstance:
       value: GameInitializer
       objectReference: {fileID: 0}
     - target: {fileID: 6375942676128292208, guid: 513b01b3dd5756d4ba1b2b5987c9d9a4, type: 3}
+      propertyPath: _rows
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6375942676128292208, guid: 513b01b3dd5756d4ba1b2b5987c9d9a4, type: 3}
+      propertyPath: _mines
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6375942676128292208, guid: 513b01b3dd5756d4ba1b2b5987c9d9a4, type: 3}
+      propertyPath: _columns
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6375942676128292208, guid: 513b01b3dd5756d4ba1b2b5987c9d9a4, type: 3}
       propertyPath: _boardView
       value: 
       objectReference: {fileID: 1479195492}
