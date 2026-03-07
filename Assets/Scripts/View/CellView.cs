@@ -24,7 +24,7 @@ public class CellView : MonoBehaviour
     private Action<int, int> _onCellClicked;
     private int _column;
     private int _row;
-    private bool _isInteractable = true;
+    private bool _isInteractable;
 
     public int Column => _column;
     public int Row => _row;
@@ -43,6 +43,7 @@ public class CellView : MonoBehaviour
 
         _column = column;
         _row = row;
+        _isInteractable = cell.IsInteractable;
         _onCellClicked = _onCellClickCallBack ?? throw new System.ArgumentNullException(nameof(_onCellClickCallBack));
 
         UpdateVisual();
@@ -50,14 +51,14 @@ public class CellView : MonoBehaviour
 
     /// <summary>
     /// Handles mouse click:
-    /// - If interactable, triggers the callback(assigned during initialization) with its coordinates.
+    /// - If not revealed, triggers the callback(assigned during initialization) with its coordinates.
     /// - Callback flows to CellViewController -> GameController.
     /// </summary>
     private void OnMouseDown()
     {
         if (_cell == null) return;
 
-        if (!_cell.IsInteractable) return;
+        if (_cell.IsRevealed) return;
 
         _onCellClicked?.Invoke(_column, _row);
     }
@@ -68,7 +69,6 @@ public class CellView : MonoBehaviour
     /// - Revealed safe: proximity number or empty.
     /// - Unrevealed but marked: flag or question sprite.
     /// - Unrevealed and unmarked: empty sprite.
-    /// Also adjusts interactability.
     /// </summary>
     public void UpdateVisual()
     {
@@ -78,7 +78,7 @@ public class CellView : MonoBehaviour
 
         if (_cell == null)
         {
-            _txtCellInfo.text = string.Empty;
+            _txtCellInfo.text = "!";
             if (_isInteractable) _isInteractable = false;
             return;
         }
@@ -94,6 +94,7 @@ public class CellView : MonoBehaviour
                 _cellSpriteRenderer.color = Color.white; // Change color to indicate revealed state
                 _txtCellInfo.text = _cell.ProximityCount > 0 ? _cell.ProximityCount.ToString() : string.Empty;
             }
+            _isInteractable = false; // Once revealed, it should not be interactable anymore
         }
         else
         {
@@ -104,8 +105,5 @@ public class CellView : MonoBehaviour
             else
                 _cellSpriteRenderer.sprite = _emptySprite;
         }
-
-        _isInteractable = !_cell.IsRevealed;
-        _cell.Interactable(_isInteractable);
     }
 }

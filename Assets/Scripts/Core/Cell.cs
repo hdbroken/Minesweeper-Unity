@@ -16,7 +16,7 @@ public class Cell
 {
     private bool _isMine;
     private bool _isRevealed;
-    private bool _isInteractable;
+    private bool _isInteractable = true;
     private CellMarkState _markState = CellMarkState.Empty;
     private int _proximityCount;
 
@@ -32,15 +32,20 @@ public class Cell
     public void Interactable(bool isInteractable) => _isInteractable = isInteractable;
 
     public void ToggleMark() 
-    { 
+    {
         switch (_markState) 
         { 
-            case CellMarkState.Empty: _markState = CellMarkState.Flag;
+            case CellMarkState.Empty: 
+                _markState = CellMarkState.Flag;
+                _isInteractable = false;
                 break; 
-            case CellMarkState.Flag: _markState = CellMarkState.Question;
+            case CellMarkState.Flag:
+                _markState = CellMarkState.Question;
+                _isInteractable = false;
                 break; 
             case CellMarkState.Question: _markState = CellMarkState.Empty;
+                _isInteractable = true;
                 break;
-        } 
+        }        
     }
 }
