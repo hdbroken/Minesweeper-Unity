@@ -47,16 +47,16 @@ public class GameController
     /// - OnFlagToggled: fired when the board flags/unflags a cell.
     /// Consumed by BoardViewController.
     /// </summary>
-    public event Action<int, int> OnCellRevealed 
-    { 
-        add { _board.OnCellRevealed += value; } 
-        remove { _board.OnCellRevealed -= value; } 
+    public event Action<int, int> OnCellRevealed
+    {
+        add { _board.OnCellRevealed += value; }
+        remove { _board.OnCellRevealed -= value; }
     }
 
-    public event Action<int, int> OnFlagToggled 
-    { 
+    public event Action<int, int> OnFlagToggled
+    {
         add { _board.OnFlagToggled += value; }
-        remove { _board.OnFlagToggled -= value; } 
+        remove { _board.OnFlagToggled -= value; }
     }
 
     /// <summary>
@@ -86,12 +86,12 @@ public class GameController
         _board.OnCellRevealed -= HandleCellRevealed;
     }
 
-    private void StartTimer() 
-    { 
+    private void StartTimer()
+    {
         _timer.Start();
-    } 
+    }
 
-    private void StopTimer() 
+    private void StopTimer()
     {
         _timer.Stop();
     }
@@ -104,47 +104,40 @@ public class GameController
     /// <summary>
     /// Reveals a cell: 
     /// - If mine: defeat.
-    /// - If safe: auto-reveals neighbors. 
+    /// - If safe and proximity = 0: auto-reveals neighbors. 
     /// - Then checks victory conditions.
     /// </summary>
-    private void RevealCell(int x, int y)
+    private void RevealCell(int column, int row)
     {
         if (_gameState != GameState.Playing) return;
 
-        _board.RevealCell(x, y);
+        _board.RevealCell(column, row);
 
-        if (_board.GetCell(x, y).IsMine)
+        Cell cell = _board.GetCell(column, row);
+        if (cell.IsMine)
         {
             _mineRevealed = true;
             EndGame();
         }
-        else
+        else if (cell.ProximityCount == 0)
         {
-            _board.AutoRevealCells(_board.GetCell(x, y), x, y);
+            _board.AutoRevealCells(cell, column, row);
         }
 
         CheckVictory();
     }
 
-    private void ToggleCellMark(int x, int y)
+    private void ToggleCellMark(int column, int row)
     {
         if (_gameState != GameState.Playing) return;
 
-        _board.ToggleCellMark(x, y);
-        // Only check for victory if the game is in Reveal mode
-        // and the cell ended up marked with a flag.
-        if (!_isMarkMode && _board.GetCell(x, y).MarkState == CellMarkState.Flag)
-        {
-            CheckVictory();
-        }
+        _board.ToggleCellMark(column, row);
     }
 
     /// <summary> 
     /// Evaluates win/lose conditions:
     /// - Mine revealed: defeat.
     /// - All safe cells revealed: victory.
-    /// - All mines correctly flagged": victory.
-    /// - Incorrect flags: defeat.
     /// In all cases, reveals the full board at the end.
     /// </summary>
     private void CheckVictory()
@@ -165,23 +158,6 @@ public class GameController
             _gameState = GameState.Won;
             EndGame();
             Debug.Log("Victory: All safe cells revealed!");
-        }
-
-        // Player placed as many flags as mines
-        if (_board.FlagCount == _board.MineCount)
-        {
-            if (_board.AreFlagsCorrect())
-            {
-                _gameState = GameState.Won;
-                EndGame();
-                Debug.Log("Victory: All mines flagged correctly!");
-            }
-            else
-            {
-                _gameState = GameState.Lost;
-                EndGame();
-                Debug.Log("Defeat: Wrong flag placement!");
-            }
         }
 
         switch (_gameState)
@@ -214,20 +190,13 @@ public class GameController
     {
         if (_isMarkMode)
             ToggleCellMark(column, row);
-        else
+        else if (GetCell(column, row).MarkState == CellMarkState.Empty)// Ignore flagged or questioned cells
             RevealCell(column, row);
     }
 
     public void SetMarkMode(bool mark)
     {
         _isMarkMode = mark;
-
-        // When switching from Mark mode to Reveal mode,
-        // check victory conditions
-        if (!_isMarkMode) 
-        {
-            CheckVictory();
-        }
     }
 
     public (int Rows, int Columns) GetBoardDimensions()
