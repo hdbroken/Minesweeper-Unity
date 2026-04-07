@@ -116,8 +116,7 @@ public class GameController
         Cell cell = _board.GetCell(column, row);
         if (cell.IsMine)
         {
-            _mineRevealed = true;
-            EndGame();
+            _mineRevealed = true;            
         }
         else if (cell.ProximityCount == 0)
         {
@@ -138,7 +137,7 @@ public class GameController
     /// Evaluates win/lose conditions:
     /// - Mine revealed: defeat.
     /// - All safe cells revealed: victory.
-    /// In all cases, reveals the full board at the end.
+    /// In both cases, reveals the full board calling FinishGame.
     /// </summary>
     private void CheckVictory()
     {
@@ -147,32 +146,35 @@ public class GameController
 
         if (_mineRevealed)
         {
-            _gameState = GameState.Lost;
-            EndGame();
-            Debug.Log("Game Over! Mine revealed.");
+            FinishGame(GameState.Lost, "Game Over! Mine revealed.");
+            return;
         }
 
         // Victory by revealing all safe cells
         if (_board.RevealedCellsCount == _board.TotalCells - _board.MineCount)
         {
-            _gameState = GameState.Won;
-            EndGame();
-            Debug.Log("Victory: All safe cells revealed!");
+            FinishGame(GameState.Won, "Victory: All safe cells revealed!");
+            return;
         }
+    }
 
-        switch (_gameState)
+    private void FinishGame(GameState result, string logMessage)
+    {
+        _gameState = result;
+
+        _board.RevealAllCells();
+
+        EndGame();
+
+        Debug.Log(logMessage);
+
+        switch (result)
         {
             case GameState.Won:
-                {
-                    _board.RevealAllCells();
-                    // TODO: trigger victory screen
-                }
+                // TODO: trigger victory screen
                 break;
             case GameState.Lost:
-                {
-                    _board.RevealAllCells();
-                    // TODO: trigger lost screen
-                }
+                // TODO: trigger lost screen
                 break;
         }
     }
