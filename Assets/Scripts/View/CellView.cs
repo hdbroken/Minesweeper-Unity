@@ -24,7 +24,6 @@ public class CellView : MonoBehaviour
     private Action<int, int> _onCellClicked;
     private int _column;
     private int _row;
-    private bool _isInteractable;
 
     public int Column => _column;
     public int Row => _row;
@@ -37,14 +36,13 @@ public class CellView : MonoBehaviour
     /// - Registers the click callback (provided by CellViewController).
     /// - Refreshes initial appearance. 
     /// </summary>
-    public void Init(Cell cell, int column, int row, Action<int, int> _onCellClickCallBack)
+    public void Init(Cell cell, int column, int row, Action<int, int> onCellClickCallBack)
     {
         _cell = cell ?? throw new System.ArgumentNullException(nameof(cell));
 
         _column = column;
         _row = row;
-        _isInteractable = cell.IsInteractable;
-        _onCellClicked = _onCellClickCallBack ?? throw new System.ArgumentNullException(nameof(_onCellClickCallBack));
+        _onCellClicked = onCellClickCallBack ?? throw new System.ArgumentNullException(nameof(onCellClickCallBack));
 
         UpdateVisual();
     }
@@ -72,16 +70,11 @@ public class CellView : MonoBehaviour
     /// </summary>
     public void UpdateVisual()
     {
-        if (!_isInteractable) return;
+        if (_cell == null) return;
+
+        if (!_cell.IsInteractable) return;
 
         if (_txtCellInfo == null) return;
-
-        if (_cell == null)
-        {
-            _txtCellInfo.text = "!";
-            if (_isInteractable) _isInteractable = false;
-            return;
-        }
 
         if (_cell.IsRevealed)
         {
@@ -94,7 +87,7 @@ public class CellView : MonoBehaviour
                 _cellSpriteRenderer.color = Color.white; // Change color to indicate revealed state
                 _txtCellInfo.text = _cell.ProximityCount > 0 ? _cell.ProximityCount.ToString() : string.Empty;
             }
-            _isInteractable = false; // Once revealed, it should not be interactable anymore
+            _cell.Interactable(false); // Once revealed, it should not be interactable anymore
         }
         else
         {

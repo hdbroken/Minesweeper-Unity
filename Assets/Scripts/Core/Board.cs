@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 /// <summary>
 /// Represents the game board. 
@@ -73,11 +72,14 @@ public class Board
     {
         int placed = 0;
         System.Random rand = new System.Random();
-
+#if UNITY_EDITOR
         if (_mineCount == 1)
+        {
             _grid[1, 0].SetMine(true); // For testing, place a single mine in a known position.
-        else
-            while (placed < _mineCount)
+            placed++;
+        }
+#endif
+        while (placed < _mineCount)
             {
                 int column = rand.Next(_columns);
                 int row = rand.Next(_rows);
