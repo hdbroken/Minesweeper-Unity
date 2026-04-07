@@ -67,7 +67,6 @@ public class BoardViewController
     /// </summary>
     private void HandleCellChanged(int column, int row)
     {
-        Cell cell = _gameController.GetCell(column, row);
         OnCellUpdated?.Invoke(column, row); 
     }
 
