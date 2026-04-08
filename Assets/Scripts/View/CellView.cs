@@ -19,6 +19,7 @@ public class CellView : MonoBehaviour
     [SerializeField] private Sprite _questionSprite;
     [SerializeField] private Sprite _mineSprite;
     [SerializeField] private Sprite _emptySprite;
+    [SerializeField] private Color _unrevealedCellColor = Color.gray;
 
     private Cell _cell;
     private Action<int, int> _onCellClicked;
@@ -96,7 +97,16 @@ public class CellView : MonoBehaviour
             else if (_cell.MarkState == CellMarkState.Question)
                 _cellSpriteRenderer.sprite = _questionSprite;
             else
-                _cellSpriteRenderer.sprite = _emptySprite;
+            {
+                ResetCellView();
+            }
         }
+    }
+
+    private void ResetCellView()
+    {
+        _cellSpriteRenderer.sprite = _emptySprite;
+        _cellSpriteRenderer.color = _unrevealedCellColor;
+        _txtCellInfo.text = string.Empty;
     }
 }

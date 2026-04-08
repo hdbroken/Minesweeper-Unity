@@ -325,6 +325,7 @@ MonoBehaviour:
   _questionSprite: {fileID: 8457688128998239237, guid: 3791ed05bd8e91d4c877eb3b2fb72434, type: 3}
   _mineSprite: {fileID: -5376534831972186403, guid: bd8147e20c631704792f3183e711c07d, type: 3}
   _emptySprite: {fileID: 8995154407686431259, guid: bc0ed4990b977744ba5cfd513c840c50, type: 3}
+  _unrevealedCellColor: {r: 0.7529412, g: 0.7529412, b: 0.7529412, a: 1}
 --- !u!61 &6408388180008162759
 BoxCollider2D:
   m_ObjectHideFlags: 0
