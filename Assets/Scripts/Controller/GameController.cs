@@ -24,6 +24,8 @@ public class GameController
     private bool _mineRevealed = false;
     private GameTimer _timer;
 
+    public Action<GameState> OnGameStateChanged;
+
     // Properties exposed to view/controllers
     public bool IsFlagMode => _isMarkMode;
     public bool IsTimerRunning => _timer.IsRunning;
@@ -177,6 +179,8 @@ public class GameController
                 // TODO: trigger lost screen
                 break;
         }
+
+        OnGameStateChanged?.Invoke(result);
     }
 
     // Called whenever a cell is revealed.
