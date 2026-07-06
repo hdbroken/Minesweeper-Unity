@@ -21,7 +21,7 @@ public class BoardViewController
     // State properties that the view needs to display.
     public bool IsTimerRunning => _gameController.IsTimerRunning;
     public TimeSpan GetTime => _gameController.GetTime();
-    public bool IsFlagMode => _gameController.IsFlagMode;
+    public bool IsMarkMode => _gameController.IsMarkMode;
     // Access to board dimensions (without exposing the Board directly).
     public int Rows => _gameController.GetBoardDimensions().Rows; 
     public int Columns => _gameController.GetBoardDimensions().Columns;
@@ -57,9 +57,10 @@ public class BoardViewController
         _gameController.OnFlagToggled -= HandleMineCounterChanged;
     }
 
-    public void ToggleMarkMode()
+    public bool ToggleMarkMode()
     {
-        _gameController.SetMarkMode(!_gameController.IsFlagMode);
+        _gameController.SetMarkMode(!_gameController.IsMarkMode);
+        return _gameController.IsMarkMode;
     }
 
     /// <summary> 

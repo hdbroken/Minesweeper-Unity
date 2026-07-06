@@ -27,7 +27,7 @@ public class GameController
     public Action<GameState> OnGameStateChanged;
 
     // Properties exposed to view/controllers
-    public bool IsFlagMode => _isMarkMode;
+    public bool IsMarkMode => _isMarkMode;
     public bool IsTimerRunning => _timer.IsRunning;
     public Cell GetCell(int column, int row) => _board.GetCell(column, row);
     public int MineCount => _board.MineCount;
