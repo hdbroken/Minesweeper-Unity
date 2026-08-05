@@ -1,27 +1,16 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary> 
 /// Main board view. 
 /// - Initialized with a BoardViewController and a CameraController. 
-/// - Subscribes to BoardViewController events: 
-///   OnCellUpdated: refreshes the visual cell. 
-///   OnMineCounterChanged: updates the mine counter. 
-/// - Generates the cell grid using a pool (CellViewPool). 
-/// - Handles the mode toggle button (Reveal/Mark). 
-/// - Updates the timer on screen while the game is active. 
+/// - Subscribes to BoardViewController event: 
+///   OnCellUpdated: refreshes the visual cell.
+/// - Generates the cell grid using a pool (CellViewPool).
 /// </summary>
 public class BoardView : MonoBehaviour, IBoardView
 {
-    [SerializeField] private Button _toggleModeButton;
-    [SerializeField] private TextMeshProUGUI _modeButtonText;
-    [SerializeField] private TextMeshProUGUI _mineCounterText;
-    [SerializeField] private TextMeshProUGUI _timerText;
-
     [SerializeField] private Transform _cellsParent;
     [SerializeField] private CellView _cellPrefab;
 
@@ -29,65 +18,31 @@ public class BoardView : MonoBehaviour, IBoardView
     private List<CellView> _activeCells = new List<CellView>();
 
     private BoardViewController _boardViewController;
-    private Coroutine _updateTimer;
     private float _spacing;
-
-    private void OnEnable()
-    {
-        if (_toggleModeButton != null)
-            _toggleModeButton.onClick.AddListener(OnToggleModeButtonClick);
-    }
 
     /// <summary>
     /// Cleanup when the view is disabled:
-    /// - Removes button listener.
-    /// - Stops the timer coroutine.
     /// - Unsubscribes from BoardViewController events. 
     /// </summary>
     private void OnDisable()
     {
-        if (_toggleModeButton != null)
-            _toggleModeButton.onClick.RemoveListener(OnToggleModeButtonClick);
-
-        if (_updateTimer != null)
-        {
-            StopCoroutine(_updateTimer);
-            _updateTimer = null;
-        }
-
         _boardViewController.OnCellUpdated -= UpdateCell;
-        _boardViewController.OnMineCounterChanged -= UpdateMineCounterText;
         _boardViewController.UnsubscribeEvents();
     }
 
-    private void OnToggleModeButtonClick()
-    {
-        bool newFlagMode = !_boardViewController.IsFlagMode;
-        _boardViewController.ToggleMarkMode();
-
-        _modeButtonText.text = newFlagMode ? "Mark" : "Reveal";
-    }
-
     /// <summary>
-    /// Initializes the view with the controller and camera and board controller.
-    /// - Subscribes to OnCellUpdated and OnMineCounterChanged. 
-    /// - Initializes the mine counter. 
+    /// Initializes the view with the camera and board controllers.
+    /// - Subscribes to OnCellUpdated. 
+    /// - Initializes the mine counter.
     /// - Generates the visual grid. 
-    /// - Adjusts the camera to board size. 
-    /// - Starts the timer coroutine. 
+    /// - Adjusts the camera to board size.
     /// </summary>
     public void Init(BoardViewController boardViewController, CameraController cameraController)
     {
         if (cameraController == null) throw new ArgumentNullException(nameof(cameraController));
-        if (boardViewController == null) throw new ArgumentNullException(nameof(boardViewController));
+        _boardViewController = boardViewController ?? throw new ArgumentNullException(nameof(boardViewController));
 
-        _boardViewController = boardViewController;
-        // Subscribe directly to Board events.
-        // - OnCellRevealed: triggered when a cell is revealed in the model.
-        // - OnFlagToggled: triggered when a cell is marked/unmarked.
-        // BoardView listens to these events to update the visual state.
         _boardViewController.OnCellUpdated += UpdateCell;
-        _boardViewController.OnMineCounterChanged += UpdateMineCounterText;
 
         _boardViewController.InitializeMineCounter();
 
@@ -96,28 +51,6 @@ public class BoardView : MonoBehaviour, IBoardView
         GenerateBoard(_boardViewController.Columns, _boardViewController.Rows);
 
         cameraController.FitCameraToBoard(_boardViewController.Rows, _boardViewController.Columns, _cellPrefab.CellSize, _spacing);
-
-        _updateTimer = StartCoroutine(UpdateTimer());
-    }
-
-    private IEnumerator UpdateTimer()
-    {
-        while (_boardViewController.IsTimerRunning)
-        {
-            _timerText.text = FormatTime(_boardViewController.GetTime);
-            yield return new WaitForSeconds(.1f);
-        }
-        // Force a final refresh to display the precise stop time (not the last 0.1s update)
-        _timerText.text = FormatTime(_boardViewController.GetTime);
-    }
-
-    private string FormatTime(TimeSpan time)
-    {
-        // Formats time as MM:SS.mmm (e.g. 02:15.347)
-        return string.Format("{0:D2}:{1:D2}.{2:D3}",
-            time.Minutes,
-            time.Seconds,
-            time.Milliseconds);
     }
 
     /// <summary> 
@@ -203,10 +136,5 @@ public class BoardView : MonoBehaviour, IBoardView
                 break;
             }
         }
-    }
-
-    private void UpdateMineCounterText(int remainingMines)
-    {
-        _mineCounterText.text = remainingMines.ToString();
     }
 }
