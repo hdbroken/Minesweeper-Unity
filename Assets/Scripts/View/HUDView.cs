@@ -42,6 +42,9 @@ public class HudView : MonoBehaviour
         if (_toggleModeButton == null) throw new ArgumentNullException(nameof(_toggleModeButton));
         if (_modeButtonText == null) throw new ArgumentNullException(nameof(_modeButtonText));
 
+        UnsubscribeFromBoard();
+        StopTimerCoroutine();
+
         _boardViewController = controller ?? throw new ArgumentNullException(nameof(controller));
         _boardViewController.OnMineCounterChanged += UpdateMineCounter;
         _updateTimer = StartCoroutine(UpdateTimer());
@@ -66,14 +69,11 @@ public class HudView : MonoBehaviour
 
     private void OnDisable()
     {
-        _boardViewController.OnMineCounterChanged -= UpdateMineCounter;
-        _toggleModeButton.onClick.RemoveListener(OnToggleModeClicked);
+        UnsubscribeFromBoard();
+        StopTimerCoroutine();
 
-        if (_updateTimer != null)
-        {
-            StopCoroutine(_updateTimer);
-            _updateTimer = null;
-        }
+        if (_toggleModeButton != null)
+            _toggleModeButton.onClick.RemoveListener(OnToggleModeClicked);
 
         if (_hamburgerButton != null)
             _hamburgerButton.onClick.RemoveListener(ToggleHamburgerMenu);
@@ -84,6 +84,13 @@ public class HudView : MonoBehaviour
             _hamburgerMenu.OnMainMenuSelected -= HandleMainMenuSelected;
             _hamburgerMenu.OnSettingsSelected -= HandleSettingsSelected;
         }
+    }
+
+    private void OnDestroy()
+    {
+        // Failsafe for cases where the object is destroyed without a clean disable path.
+        UnsubscribeFromBoard();
+        StopTimerCoroutine();
     }
 
     private void HandleRestartSelected() => OnRestartRequested?.Invoke();
@@ -128,4 +135,23 @@ public class HudView : MonoBehaviour
     private void UpdateMineCounter(int remaining) => _mineCounterText.text = remaining.ToString();
 
     private void UpdateModeText(bool isMarkMode) => _modeButtonText.text = isMarkMode ? "Mark" : "Reveal";
+
+    private void UnsubscribeFromBoard()
+    {
+        if (_boardViewController != null)
+        {
+            _boardViewController.OnMineCounterChanged -= UpdateMineCounter;
+            _boardViewController = null;
+        }
+
+    }
+
+    private void StopTimerCoroutine()
+    {
+        if (_updateTimer != null)
+        {
+            StopCoroutine(_updateTimer);
+            _updateTimer = null;
+        }
+    }
 }
